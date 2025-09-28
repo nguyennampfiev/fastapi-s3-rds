@@ -1,0 +1,26 @@
+[project]
+name = "fastapi-s3-rds"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+[dependency-groups]
+default = [
+    "alembic>=1.16.5",
+    "boto3>=1.40.40",
+    "fastapi>=0.117.1",
+    "psycopg2-binary>=2.9.10",
+    "pydantic>=2.11.9",
+    "python-dotenv>=1.1.1",
+    "python-multipart>=0.0.20",
+    "sqlalchemy>=2.0.43",
+    "uvicorn[standard]>=0.37.0",
+]
+
+dev = [
+    "black>=25.9.0",
+    "httpx>=0.28.1",
+    "pre-commit>=4.3.0",
+    "pytest>=8.4.2",
+    "ruff>=0.13.2",
+]
