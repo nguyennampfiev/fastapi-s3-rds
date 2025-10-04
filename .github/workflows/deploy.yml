@@ -32,11 +32,13 @@ jobs:
             git pull origin main
 
             # Install uv if not already installed
-            if [ ! -f ~/.uv/bin/uv ]; then
+            if ! command -v uv > /dev/null; then
               echo '💡 Installing uv...'
               curl -LsSf https://astral.sh/uv/install.sh | sh
             fi
-            export PATH=\"$HOME/.uv/bin:$PATH\"
+
+            # Make sure the current shell can find uv
+            export PATH=\"$HOME/.local/bin:$PATH\"
 
             echo '🔄 Syncing dependencies with uv...'
             uv sync --frozen
@@ -44,5 +46,4 @@ jobs:
             echo '🔁 Restarting FastAPI service...'
             sudo systemctl restart fastapi
 
-            echo '✅ Deployment successful!'
-          "
+            echo '✅ 
