@@ -27,8 +27,16 @@ jobs:
           ssh -o StrictHostKeyChecking=no ubuntu@13.61.178.204 "
             set -e
             cd ~/fastapi-s3-rds || exit 1
+
             echo '🚀 Pulling latest changes...'
             git pull origin main
+
+            # Install uv if not already installed
+            if [ ! -f ~/.uv/bin/uv ]; then
+              echo '💡 Installing uv...'
+              curl -LsSf https://astral.sh/uv/install.sh | sh
+            fi
+            export PATH=\"$HOME/.uv/bin:$PATH\"
 
             echo '🔄 Syncing dependencies with uv...'
             uv sync --frozen
