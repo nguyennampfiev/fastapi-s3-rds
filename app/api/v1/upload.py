@@ -23,44 +23,54 @@ def get_db():
 async def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
     orig_name = file.filename or "uploaded"
     _, ext = os.path.splitext(orig_name)
-    # key = f"{uuid4().hex}{ext}"
-
     file_id = str(uuid4())
     s3_key = f"{file_id}_{file.filename}"
 
-    # determine size: move to end then back to start
+    # determine size
     try:
         file.file.seek(0, os.SEEK_END)
-        # size = file.file.tell()
+        size = file.file.tell()
         file.file.seek(0)
     except Exception as e:
         print(f"Could not determine file size: {e}")
-        # size = None
+        size = None
 
     # upload to S3
     try:
-        s3_s3svc.upload_file_to_s3(
-            file.file, settings.S3_BUCKET, key=s3_key, content_type=file.content_type
+        s3_s3svc.upload_fileobj(
+            file.file,
+            settings.s3_bucket_name,
+            key=s3_key,
+            content_type=file.content_type,
         )
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to upload file to S3: {str(e)}"
+            status_code=500,
+            detail=f"Failed to upload file to S3: {str(e)}"
         )
 
+    # store metadata in DB
     db_file = crud_file.create_file(
-        db=db, file_id=file_id, filename=file.filename, s3_key=s3_key
+        db=db,
+        filename=file.filename,
+        s3_key=s3_key,
+        content_type=file.content_type,
+        size=size
     )
 
+    # generate presigned URL
     download_url = s3_s3svc.generate_presigned_url(
-        settings.S3_BUCKET, s3_key, expiration=settings.PRESIGNED_URL_EXPIRATION
+        settings.s3_bucket_name,
+        s3_key,
+        expiration=settings.PRESIGNED_URL_EXPIRATION
     )
 
     return FileOut(
         id=db_file.id,
         filename=db_file.filename,
         s3_key=db_file.s3_key,
-        content_type=file.content_type,
-        size=db.size,
+        content_type=db_file.content_type,
+        size=db_file.size,
         uploaded_at=db_file.uploaded_at,
         download_url=download_url,
     )

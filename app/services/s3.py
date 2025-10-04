@@ -2,11 +2,13 @@ import boto3
 from botocore.config import Config
 from app.core.config import settings
 
-
-session = boto3.session.Session()
+session = boto3.session.Session(
+    aws_access_key_id=settings.aws_access_key_id,
+    aws_secret_access_key=settings.aws_secret_access_key,
+    region_name=settings.aws_region
+)
 s3_client = session.client(
     service_name="s3",
-    region_name=settings.AWS_REGION,
     config=Config(signature_version="s3v4"),
 )
 
