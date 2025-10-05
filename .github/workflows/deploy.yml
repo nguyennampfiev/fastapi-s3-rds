@@ -1,4 +1,4 @@
-name: Deploy FastAPI App to EC2 (uv)
+name: CI/CD FastAPI (uv)
 
 on:
   push:
@@ -6,22 +6,62 @@ on:
       - main
 
 jobs:
-  deploy:
-    name: Deploy to EC2
+  test:
+    name: Run Tests
     runs-on: ubuntu-latest
 
     steps:
-      # Step 1: Checkout your repository
+      # Step 1: Checkout repository
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Set up SSH
+      # Step 2: Install system dependencies
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl bash
+
+      # Step 3: Install uv
+      - name: Install uv
+        run: |
+          curl -LsSf -o install_uv.sh https://astral.sh/uv/install.sh
+          bash install_uv.sh
+
+      # Step 4: Add uv to PATH
+      - name: Add uv to PATH
+        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      # Step 5: Sync Python dependencies
+      - name: Sync dependencies
+        run: uv sync --frozen
+
+      # Step 6: Run tests
+      - name: Run Pytest
+        env:
+          DATABASE_URL: postgresql://postgres:password@localhost:5432/mydb
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+          AWS_REGION: eu-north-1
+        run: uv run pytest -v --disable-warnings
+
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      # Step 1: Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Step 2: Setup SSH
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      # Step 3: Deploy code to EC2
+      # Step 3: Deploy to EC2
       - name: Deploy to EC2 instance
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@13.61.178.204 '
@@ -31,16 +71,14 @@ jobs:
             echo "🚀 Pulling latest changes..."
             git pull origin main
 
-            # Install uv if not already installed
+            # Install uv if not installed
             if ! command -v uv > /dev/null; then
-              echo "💡 Installing uv..."
-              curl -LsSf https://astral.sh/uv/install.sh | sh
+              curl -LsSf -o install_uv.sh https://astral.sh/uv/install.sh
+              bash install_uv.sh
             fi
-
-            # Make sure the current shell can find uv
             export PATH="$HOME/.local/bin:$PATH"
 
-            echo "🔄 Syncing dependencies with uv..."
+            echo "🔄 Syncing dependencies..."
             uv sync --frozen
 
             echo "🔁 Restarting FastAPI service..."
