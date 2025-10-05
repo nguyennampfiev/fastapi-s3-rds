@@ -1,4 +1,4 @@
-name: CI/CD FastAPI (uv)
+name: CI/CD FastAPI (uv) Deployment
 
 on:
   push:
@@ -6,6 +6,9 @@ on:
       - main
 
 jobs:
+  # --------------------------
+  # 1️⃣ Run Tests
+  # --------------------------
   test:
     name: Run Tests
     runs-on: ubuntu-latest
@@ -15,27 +18,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Install system dependencies
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y curl bash
-
-      # Step 3: Install uv
+      # Step 2: Install uv
       - name: Install uv
         run: |
-          curl -LsSf -o install_uv.sh https://astral.sh/uv/install.sh
-          bash install_uv.sh
+          curl -LsSf https://astral.sh/uv/install.sh | bash
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      # Step 4: Add uv to PATH
-      - name: Add uv to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      # Step 5: Sync Python dependencies
+      # Step 3: Sync dependencies with uv
       - name: Sync dependencies
         run: uv sync --frozen
 
-      # Step 6: Run tests
+      # Step 4: Run Pytest
       - name: Run Pytest
         env:
           DATABASE_URL: postgresql://postgres:password@localhost:5432/mydb
@@ -45,6 +38,9 @@ jobs:
           AWS_REGION: eu-north-1
         run: uv run pytest -v --disable-warnings
 
+  # --------------------------
+  # 2️⃣ Deploy to EC2
+  # --------------------------
   deploy:
     name: Deploy to EC2
     runs-on: ubuntu-latest
@@ -55,26 +51,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Step 2: Setup SSH
+      # Step 2: Setup SSH key
       - name: Setup SSH key
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      # Step 3: Deploy to EC2
-      - name: Deploy to EC2 instance
+      # Step 3: Deploy code
+      - name: Deploy to EC2
         run: |
           ssh -o StrictHostKeyChecking=no ubuntu@13.61.178.204 '
             set -e
             cd ~/fastapi-s3-rds || exit 1
 
             echo "🚀 Pulling latest changes..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             # Install uv if not installed
             if ! command -v uv > /dev/null; then
-              curl -LsSf -o install_uv.sh https://astral.sh/uv/install.sh
-              bash install_uv.sh
+              curl -LsSf https://astral.sh/uv/install.sh | bash
             fi
             export PATH="$HOME/.local/bin:$PATH"
 
