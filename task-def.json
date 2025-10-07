@@ -1,0 +1,51 @@
+{
+  "family": "fastapi-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::390844761221:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "fastapi-app",
+      "image": "390844761221.dkr.ecr.eu-north-1.amazonaws.com/fastapi-s3-rds:latest",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "secrets": [
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:390844761221:secret:fastapi_AWS_ACCESS_KEY_ID"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:390844761221:secret:fastapi_AWS_SECRET_ACCESS_KEY"
+        },
+        {
+          "name": "DATABASE_URL",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:390844761221:secret:fastapi_DATABASE_URL"
+        },
+        {
+          "name": "S3_BUCKET_NAME",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:390844761221:secret:fastapi_S3_BUCKET_NAME"
+        },
+        {
+          "name": "AWS_REGION",
+          "valueFrom": "arn:aws:secretsmanager:eu-north-1:390844761221:secret:fastapi_AWS_REGION"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/fastapi-app",
+          "awslogs-region": "eu-north-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}
